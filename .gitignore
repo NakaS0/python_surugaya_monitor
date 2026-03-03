@@ -1,0 +1,18 @@
+# Local env
+.env
+
+# Runtime/private data
+surugaya_cookies.json
+target_data/
+saved_items.json
+latest_check.json
+check_results.jsonl
+
+# Python artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local virtual environment
+venv/
+
