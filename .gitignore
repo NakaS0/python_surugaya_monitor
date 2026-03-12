@@ -7,6 +7,9 @@ target_data/
 saved_items.json
 latest_check.json
 check_results.jsonl
+.chrome-debug-profile/
+.chrome-debug-session/
+db.sqlite3
 
 # Python artifacts
 __pycache__/

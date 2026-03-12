@@ -1,28 +1,28 @@
-"""監視対象URL一覧を `.env` から組み立てる設定モジュール。
+"""`.env` からチェック対象セットを読み込む。"""
 
-このファイルの役割:
-- `.env` の値を読む
-- 監視対象を `FIXED_TARGETS` 形式に整える
-"""
+from __future__ import annotations
 
 import os
 from pathlib import Path
 
 from scraper import DEFAULT_BASE_URL
 
+MAX_TARGET_SETS = 4
+TARGET_SET_LABELS = {
+    1: "本番用",
+    2: "テスト用",
+    3: "予備3",
+    4: "予備4",
+}
+
 
 def _read_dotenv(path: str = ".env") -> dict[str, str]:
-    """`.env` を読み取り、`{キー: 値}` の辞書にして返す。
-
-    簡易パーサーのため、`KEY=VALUE` 形式のみを対象にしている。
-    コメント行と空行は無視する。
-    """
     env_map: dict[str, str] = {}
-    p = Path(path)
-    if not p.exists():
+    dotenv_path = Path(path)
+    if not dotenv_path.exists():
         return env_map
 
-    for raw_line in p.read_text(encoding="utf-8-sig").splitlines():
+    for raw_line in dotenv_path.read_text(encoding="utf-8-sig").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -37,38 +37,68 @@ def _read_dotenv(path: str = ".env") -> dict[str, str]:
     return env_map
 
 
-_DOTENV = _read_dotenv()
-
-
 def _env(key: str, default: str = "") -> str:
-    """環境変数を優先して取得し、なければ `.env`、最後に既定値を返す。"""
-    if key in os.environ and os.environ[key]:
-        return os.environ[key]
-    return _DOTENV.get(key, default)
+    value = os.environ.get(key, "").strip()
+    if value:
+        return value
+    return _read_dotenv().get(key, default)
 
 
-def _build_targets() -> list[dict[str, str]]:
-    """`TARGET_1..4` の設定値から監視対象リストを生成する。"""
-    specs = [
-        ("default", "TARGET_1_NAME", "TARGET_1_URL", "監視対象1", DEFAULT_BASE_URL),
-        ("kobayashi", "TARGET_2_NAME", "TARGET_2_URL", "監視対象2", ""),
-        ("fanza_kuji", "TARGET_3_NAME", "TARGET_3_URL", "監視対象3", ""),
-        ("shining_musume", "TARGET_4_NAME", "TARGET_4_URL", "監視対象4", ""),
+def default_active_target_set() -> int:
+    raw = _env("ACTIVE_TARGET_SET", "1").strip()
+    if raw.isdigit():
+        value = int(raw)
+        if 1 <= value <= MAX_TARGET_SETS:
+            return value
+    return 1
+
+
+def available_target_sets() -> list[dict[str, object]]:
+    return [
+        {"value": index, "label": TARGET_SET_LABELS.get(index, f"セット{index}")}
+        for index in range(1, MAX_TARGET_SETS + 1)
     ]
+
+
+def _default_specs() -> list[tuple[str, str, str]]:
+    return [
+        ("default", "イラストカード", DEFAULT_BASE_URL),
+        ("kobayashi", "小林さんちのメイドラゴン", ""),
+        ("fanza_kuji", "FANZAオンラインくじ", ""),
+        ("shining_musume", "シャイニング娘", ""),
+    ]
+
+
+def _target_keys(set_no: int, slot_no: int) -> tuple[str, str]:
+    return (f"SET_{set_no}_TARGET_{slot_no}_NAME", f"SET_{set_no}_TARGET_{slot_no}_URL")
+
+
+def _legacy_target_keys(slot_no: int) -> tuple[str, str]:
+    return (f"TARGET_{slot_no}_NAME", f"TARGET_{slot_no}_URL")
+
+
+def get_targets(active_set: int | None = None) -> list[dict[str, str]]:
+    set_no = active_set or default_active_target_set()
+    if not 1 <= set_no <= MAX_TARGET_SETS:
+        set_no = default_active_target_set()
+
     targets: list[dict[str, str]] = []
-    for tid, nkey, ukey, default_name, default_url in specs:
-        name = _env(nkey, default_name).strip()
-        url = _env(ukey, default_url).strip()
+    for slot_no, (target_id, default_name, default_url) in enumerate(_default_specs(), start=1):
+        name_key, url_key = _target_keys(set_no, slot_no)
+        name = _env(name_key, default_name).strip()
+        url = _env(url_key, default_url).strip()
+
+        if set_no == 1 and not url:
+            legacy_name_key, legacy_url_key = _legacy_target_keys(slot_no)
+            name = _env(legacy_name_key, name).strip()
+            url = _env(legacy_url_key, url).strip()
+
         if not url:
             continue
-        targets.append({"id": tid, "name": name, "url": url})
+        targets.append({"id": target_id, "name": name, "url": url})
 
     if not targets:
         raise RuntimeError(
-            "No monitoring targets configured. Set TARGET_1_URL (or others) in .env."
+            "No check targets configured. Set ACTIVE_TARGET_SET and SET_n_TARGET_x_URL values in .env."
         )
     return targets
-
-
-# 他ファイルはこの定数だけ import すれば監視対象を利用できる。
-FIXED_TARGETS = _build_targets()

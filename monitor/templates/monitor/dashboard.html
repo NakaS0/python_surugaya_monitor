@@ -1,0 +1,910 @@
+{% load static %}
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>駿河屋新着チェッカー</title>
+  <style>
+    :root {
+      --bg-top: #eef7ff;
+      --bg-bottom: #d9ebff;
+      --panel: rgba(255, 255, 255, 0.96);
+      --line: #c7def7;
+      --line-strong: #8cb8e8;
+      --ink: #10345b;
+      --muted: #56779d;
+      --blue: #0b66c3;
+      --blue-deep: #084f99;
+      --blue-soft: #ebf5ff;
+      --shadow: 0 18px 48px rgba(12, 72, 138, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(67, 181, 255, 0.25), transparent 24%),
+        radial-gradient(circle at top right, rgba(11, 102, 195, 0.14), transparent 28%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0, rgba(255, 255, 255, 0) 28%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0, rgba(255, 255, 255, 0.16) 1px, transparent 1px, transparent 88px);
+      opacity: 0.55;
+    }
+    .wrap {
+      position: relative;
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    .hero {
+      margin-bottom: 18px;
+      padding: 18px 22px;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-radius: 24px;
+      background: linear-gradient(120deg, rgba(255, 255, 255, 0.94) 0%, rgba(236, 245, 255, 0.96) 45%, rgba(220, 236, 255, 0.94) 100%);
+      box-shadow: var(--shadow);
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(11px, 1.7vw, 18px);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+    .target-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .target-card {
+      display: block;
+      padding: 16px;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 20px;
+      border: 1px solid rgba(199, 222, 247, 0.95);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 255, 0.94));
+      box-shadow: var(--shadow);
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .target-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--line-strong);
+    }
+    .target-card.active {
+      border-color: var(--blue);
+      background: linear-gradient(135deg, rgba(11, 102, 195, 0.12), rgba(67, 181, 255, 0.08)), linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(235, 245, 255, 0.96));
+      box-shadow: 0 18px 32px rgba(11, 102, 195, 0.18);
+    }
+    .target-name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .target-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .target-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue-deep);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 18px 22px;
+      border-radius: 24px;
+      border: 1px solid rgba(140, 184, 232, 0.55);
+      background: linear-gradient(125deg, rgba(11, 102, 195, 0.95), rgba(67, 181, 255, 0.92));
+      box-shadow: 0 20px 34px rgba(11, 102, 195, 0.22);
+      color: #fff;
+    }
+    .action-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .action-meta {
+      margin-top: 6px;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+    }
+    .check-form {
+      margin: 0;
+    }
+    .target-set-form {
+      margin: 0;
+    }
+    .target-set-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 160px;
+      min-height: 38px;
+      padding: 4px;
+      border: 1px solid rgba(140, 184, 232, 0.72);
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(8, 79, 153, 0.12);
+    }
+    .target-set-current {
+      min-width: 76px;
+      text-align: center;
+      color: var(--blue-deep);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .target-set-option {
+      width: 34px;
+      min-width: 34px;
+      min-height: 30px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0;
+      background: var(--blue-soft);
+      color: var(--blue-deep);
+      font: inherit;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      text-align: center;
+      cursor: pointer;
+    }
+    .target-set-option:hover,
+    .target-set-option.active {
+      background: rgba(11, 102, 195, 0.16);
+    }
+    .action-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 124px;
+      min-height: 38px;
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 16px;
+      color: var(--blue-deep);
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 800;
+      font-family: inherit;
+      text-decoration: none;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(8, 79, 153, 0.18);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .action-button[disabled] {
+      opacity: 0.7;
+      cursor: wait;
+    }
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+    .panel {
+      border-radius: 24px;
+      border: 1px solid rgba(140, 184, 232, 0.55);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      padding: 20px 22px 22px;
+    }
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+    .section-title h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .section-title span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid rgba(199, 222, 247, 0.95);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.95);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 440px;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e6f0fb;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    th {
+      color: var(--blue-deep);
+      background: #f4f9ff;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .items-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .item-card {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(199, 222, 247, 0.95);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 255, 0.94));
+    }
+    .item-thumb {
+      width: 120px;
+      height: 120px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #e7f2ff, #cfe5ff);
+      overflow: hidden;
+    }
+    .item-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .item-name {
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+    .item-name:hover, .item-url:hover {
+      text-decoration: underline;
+    }
+    .item-detail {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .item-url {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--blue);
+      text-decoration: none;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .empty {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px dashed var(--line-strong);
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+    }
+    .graph-button {
+      min-width: 132px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(6, 30, 54, 0.42);
+      z-index: 998;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.visible {
+      display: flex;
+    }
+    .modal-card {
+      width: min(920px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 24px 48px rgba(5, 36, 77, 0.22);
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .modal-head h3 {
+      margin: 0;
+      font-size: 22px;
+      color: var(--blue-deep);
+    }
+    .close-button {
+      min-width: 72px;
+    }
+    .graph-wrap {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(199, 222, 247, 0.95);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 255, 0.94));
+    }
+    .graph-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .graph-caption {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .graph-tooltip {
+      position: fixed;
+      display: none;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(16, 52, 91, 0.96);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.5;
+      pointer-events: none;
+      z-index: 1001;
+      box-shadow: 0 12px 24px rgba(5, 36, 77, 0.22);
+      white-space: nowrap;
+    }
+    .progress-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(6, 30, 54, 0.42);
+      z-index: 999;
+      backdrop-filter: blur(4px);
+    }
+    .progress-overlay.visible {
+      display: flex;
+    }
+    .progress-card {
+      width: min(520px, calc(100vw - 32px));
+      padding: 26px 28px 24px;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(67, 181, 255, 0.16), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(236, 245, 255, 0.97));
+      box-shadow: 0 24px 48px rgba(5, 36, 77, 0.22);
+      text-align: left;
+      border: 1px solid rgba(199, 222, 247, 0.95);
+    }
+    .progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .progress-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(11, 102, 195, 0.08);
+      color: var(--blue-deep);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+    .progress-brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #43b5ff, #0b66c3);
+      box-shadow: 0 0 0 4px rgba(67, 181, 255, 0.16);
+    }
+    .progress-visual {
+      width: 160px;
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .loading-gif {
+      width: 160px;
+      height: auto;
+      display: block;
+      border-radius: 18px;
+      box-shadow: 0 12px 24px rgba(11, 102, 195, 0.16);
+      border: 1px solid rgba(140, 184, 232, 0.55);
+      background: #fff;
+    }
+    .progress-fallback {
+      flex: 0 0 auto;
+      position: absolute;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #dcebff);
+      border: 1px solid rgba(140, 184, 232, 0.72);
+      box-shadow: 0 10px 22px rgba(11, 102, 195, 0.12);
+    }
+    .progress-box {
+      left: 0;
+      bottom: 2px;
+      width: 44px;
+      height: 44px;
+      animation: floatBox 1.8s ease-in-out infinite;
+    }
+    .progress-card-mini {
+      right: 0;
+      top: 0;
+      width: 66px;
+      height: 52px;
+      animation: floatCard 1.8s ease-in-out infinite 0.2s;
+    }
+    .progress-bar-track {
+      margin-top: 8px;
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(11, 102, 195, 0.10);
+      overflow: hidden;
+      border: 1px solid rgba(140, 184, 232, 0.45);
+    }
+    .progress-bar-fill {
+      width: 38%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #0b66c3, #43b5ff, #0b66c3);
+      background-size: 200% 100%;
+      animation: loadingBar 1.4s linear infinite;
+    }
+    .progress-title {
+      margin: 0;
+      color: var(--blue-deep);
+      font-size: 22px;
+      font-weight: 800;
+    }
+    .progress-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .progress-status {
+      margin-top: 14px;
+      color: var(--blue-deep);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    @keyframes loadingBar {
+      0% {
+        transform: translateX(-20%);
+        background-position: 0% 50%;
+      }
+      100% {
+        transform: translateX(210%);
+        background-position: 100% 50%;
+      }
+    }
+    @keyframes floatBox {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(5px); }
+    }
+    @media (max-width: 1100px) {
+      .target-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 720px) {
+      .wrap { padding: 14px 12px 28px; }
+      .hero { padding: 16px 18px; }
+      .target-strip {
+        grid-template-columns: 1fr;
+      }
+      .action-bar,
+      .section-title {
+        display: block;
+      }
+      .hero-top {
+        display: block;
+      }
+      .hero-actions {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .hero-top .action-button,
+      .hero-top .target-set-switcher {
+        margin-top: 12px;
+      }
+      .action-buttons {
+        margin-top: 12px;
+      }
+      .check-form {
+        margin: 0;
+      }
+      .panel {
+        padding: 16px;
+      }
+      .item-card {
+        grid-template-columns: 1fr;
+      }
+      .item-thumb {
+        width: 100%;
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-top">
+        <h1>駿河屋新着チェッカー</h1>
+        <div class="hero-actions">
+          <div class="target-set-switcher">
+            <form class="target-set-form" method="post" action="/">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="switch_set">
+              <input type="hidden" name="active_set" value="{% if active_target_set == 1 %}2{% else %}1{% endif %}">
+              <button class="target-set-option" type="submit" aria-label="左へ">‹</button>
+            </form>
+            <div class="target-set-current">
+              {% for target_set in target_sets %}
+                {% if target_set.value == active_target_set %}{{ target_set.label }}{% endif %}
+              {% endfor %}
+            </div>
+            <form class="target-set-form" method="post" action="/">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="switch_set">
+              <input type="hidden" name="active_set" value="{% if active_target_set == 1 %}2{% else %}1{% endif %}">
+              <button class="target-set-option" type="submit" aria-label="右へ">›</button>
+            </form>
+          </div>
+          <form class="check-form js-check-form" method="post" action="/">
+            {% csrf_token %}
+            {% if selected_target %}
+              <input type="hidden" name="selected_target" value="{{ selected_target.target_id }}">
+            {% endif %}
+            <input type="hidden" name="action" value="check_all">
+            <button class="action-button" type="submit">すべてチェックする</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="target-strip">
+      {% for summary in summaries %}
+        <a class="target-card{% if selected_target and selected_target.id == summary.target.id %} active{% endif %}" href="/?target={{ summary.target.target_id }}">
+          <div class="target-head">
+            <h2 class="target-name">{{ summary.target.name }}</h2>
+            {% if summary.latest_run %}
+              <div class="target-pill">新着 {{ summary.latest_run.new_items_count }} 件</div>
+            {% else %}
+              <div class="target-pill">未実行</div>
+            {% endif %}
+          </div>
+        </a>
+      {% empty %}
+        <div class="empty">チェック対象がまだ登録されていません。</div>
+      {% endfor %}
+    </section>
+
+    {% if selected_target %}
+      <section class="action-bar">
+        <div>
+          <h2 class="action-title">{{ selected_target.name }}</h2>
+          {% if latest_overall_run %}
+            <div class="action-meta">最終更新: {{ latest_overall_run.checked_at|date:"Y-m-d H:i:s" }}</div>
+          {% endif %}
+        </div>
+        <div class="action-buttons">
+          <a class="action-button" href="{{ selected_target.url }}" target="_blank" rel="noreferrer">駿河屋ページ</a>
+          <form class="check-form js-check-form" method="post" action="/">
+            {% csrf_token %}
+            <input type="hidden" name="target" value="{{ selected_target.target_id }}">
+            <input type="hidden" name="selected_target" value="{{ selected_target.target_id }}">
+            <button class="action-button" type="submit">チェックする</button>
+          </form>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="stack">
+      <div class="panel">
+        <div class="section-title">
+          <h2>実行履歴</h2>
+          <button class="action-button graph-button" type="button" id="open-graph-button">取得件数グラフ</button>
+        </div>
+        {% if recent_runs %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>日時</th>
+                  <th>新着件数</th>
+                  <th>取得件数</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for run in recent_runs %}
+                  <tr>
+                    <td>{{ run.checked_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ run.new_items_count }}</td>
+                    <td>{{ run.total_items }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty">まだ履歴はありません。</div>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        <div class="section-title">
+          <h2>直近新着アイテム</h2>
+          <span>
+            {% if display_items_run %}
+              表示元: {{ display_items_run.checked_at|date:"Y-m-d H:i:s" }}
+            {% else %}
+              表示できる履歴なし
+            {% endif %}
+          </span>
+        </div>
+        {% if new_items %}
+          <div class="items-grid">
+            {% for item in new_items %}
+              <article class="item-card">
+                <div class="item-thumb">
+                  {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="">
+                  {% else %}
+                    <img alt="">
+                  {% endif %}
+                </div>
+                <div>
+                  <a class="item-name" href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.name }}</a>
+                  <div class="item-detail">
+                    <div>ID: {{ item.product_id }}</div>
+                    <div>価格: {{ item.price|default:"価格情報なし" }}</div>
+                  </div>
+                  <a class="item-url" href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.url }}</a>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">表示できる新着アイテムはありません。</div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  {{ graph_runs|json_script:"graph-runs-data" }}
+
+  <div class="modal-overlay" id="graph-modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>取得件数グラフ</h3>
+        <button class="action-button close-button" type="button" id="close-graph-button">閉じる</button>
+      </div>
+      <div class="graph-wrap">
+        <svg class="graph-svg" id="graph-svg" viewBox="0 0 860 420" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="graph-caption">最新 100 件までの実行履歴から取得件数を表示しています。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="graph-tooltip" id="graph-tooltip" aria-hidden="true"></div>
+
+  <div class="progress-overlay" id="progress-overlay" aria-hidden="true">
+    <div class="progress-card">
+      <div class="progress-head">
+        <div>
+          <div class="progress-brand">
+            <span class="progress-brand-dot"></span>
+            SURUGA-YA LOADING
+          </div>
+          <p class="progress-title">新着データを確認しています</p>
+          <p class="progress-note">駿河屋ページから商品情報を取得し、差分を整理しています。完了後に画面が自動で更新されます。</p>
+        </div>
+        <div class="progress-visual" aria-hidden="true">
+          <img class="loading-gif" src="{% static 'cat.gif' %}" alt="loading">
+        </div>
+      </div>
+      <div class="progress-bar-track" aria-hidden="true">
+        <div class="progress-bar-fill"></div>
+      </div>
+      <div class="progress-status">CHECK IN PROGRESS</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const overlay = document.getElementById("progress-overlay");
+      const forms = document.querySelectorAll(".js-check-form");
+      if (!forms.length || !overlay) return;
+
+      forms.forEach(function (form) {
+        form.addEventListener("submit", function () {
+          const button = form.querySelector("button");
+          if (button) {
+            button.disabled = true;
+            button.textContent = "チェック中...";
+          }
+          overlay.classList.add("visible");
+          overlay.setAttribute("aria-hidden", "false");
+        });
+      });
+
+      const modal = document.getElementById("graph-modal");
+      const openGraphButton = document.getElementById("open-graph-button");
+      const closeGraphButton = document.getElementById("close-graph-button");
+      const svg = document.getElementById("graph-svg");
+      const graphDataNode = document.getElementById("graph-runs-data");
+      const tooltip = document.getElementById("graph-tooltip");
+
+      function renderGraph() {
+        if (!svg || !graphDataNode) return;
+        const rows = JSON.parse(graphDataNode.textContent || "[]");
+        if (!rows.length) {
+          svg.innerHTML = '<text x="430" y="210" text-anchor="middle" fill="#56779d" font-size="20">表示できる履歴がありません</text>';
+          return;
+        }
+
+        const width = 860;
+        const height = 420;
+        const padding = { top: 30, right: 24, bottom: 46, left: 64 };
+        const innerWidth = width - padding.left - padding.right;
+        const innerHeight = height - padding.top - padding.bottom;
+        const values = rows.map(function (row) { return row.total_items || 0; });
+        const maxValue = Math.max.apply(null, values.concat([1]));
+        const stepX = rows.length > 1 ? innerWidth / (rows.length - 1) : 0;
+
+        const points = rows.map(function (row, index) {
+          const x = padding.left + (rows.length > 1 ? stepX * index : innerWidth / 2);
+          const y = padding.top + innerHeight - ((row.total_items || 0) / maxValue) * innerHeight;
+          return { x: x, y: y, value: row.total_items || 0, label: row.checked_at };
+        });
+
+        const polyline = points.map(function (point) {
+          return point.x.toFixed(1) + ',' + point.y.toFixed(1);
+        }).join(' ');
+
+        const horizontalLines = 4;
+        const grid = Array.from({ length: horizontalLines + 1 }, function (_, index) {
+          const ratio = index / horizontalLines;
+          const y = padding.top + innerHeight * ratio;
+          const value = Math.round(maxValue * (1 - ratio));
+          return '<line x1="' + padding.left + '" y1="' + y + '" x2="' + (width - padding.right) + '" y2="' + y + '" stroke="#d8e9fb" stroke-width="1" />'
+            + '<text x="' + (padding.left - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#56779d" font-size="12">' + value + '</text>';
+        }).join('');
+
+        const dots = points.map(function (point) {
+          return '<circle class="graph-dot" cx="' + point.x + '" cy="' + point.y + '" r="4" fill="#0b66c3"'
+            + ' data-label="' + point.label + '" data-value="' + point.value + '">'
+            + '</circle>';
+        }).join('');
+
+        const lastPoint = points[points.length - 1];
+        const firstLabel = rows[0].checked_at || '';
+        const lastLabel = rows[rows.length - 1].checked_at || '';
+
+        svg.innerHTML =
+          '<rect x="0" y="0" width="' + width + '" height="' + height + '" rx="18" fill="#ffffff" />'
+          + grid
+          + '<line x1="' + padding.left + '" y1="' + (padding.top + innerHeight) + '" x2="' + (width - padding.right) + '" y2="' + (padding.top + innerHeight) + '" stroke="#8cb8e8" stroke-width="1.5" />'
+          + '<line x1="' + padding.left + '" y1="' + padding.top + '" x2="' + padding.left + '" y2="' + (padding.top + innerHeight) + '" stroke="#8cb8e8" stroke-width="1.5" />'
+          + '<polyline fill="none" stroke="#0b66c3" stroke-width="3" points="' + polyline + '" />'
+          + dots
+          + '<text x="' + padding.left + '" y="' + (height - 14) + '" fill="#56779d" font-size="12">' + firstLabel + '</text>'
+          + '<text x="' + (width - padding.right) + '" y="' + (height - 14) + '" text-anchor="end" fill="#56779d" font-size="12">' + lastLabel + '</text>'
+          + '<text x="' + lastPoint.x + '" y="' + (lastPoint.y - 12) + '" text-anchor="middle" fill="#084f99" font-size="12" font-weight="700">' + lastPoint.value + '件</text>';
+      }
+
+      function openModal() {
+        if (!modal) return;
+        renderGraph();
+        modal.classList.add("visible");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeModal() {
+        if (!modal) return;
+        modal.classList.remove("visible");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      if (openGraphButton) {
+        openGraphButton.addEventListener("click", openModal);
+      }
+      if (closeGraphButton) {
+        closeGraphButton.addEventListener("click", closeModal);
+      }
+      if (modal) {
+        modal.addEventListener("click", function (event) {
+          if (event.target === modal) {
+            closeModal();
+          }
+        });
+      }
+
+      if (svg && tooltip) {
+        svg.addEventListener("mousemove", function (event) {
+          const target = event.target;
+          if (!(target instanceof SVGCircleElement) || !target.classList.contains("graph-dot")) {
+            tooltip.style.display = "none";
+            tooltip.setAttribute("aria-hidden", "true");
+            return;
+          }
+
+          const label = target.getAttribute("data-label") || "";
+          const value = target.getAttribute("data-value") || "0";
+          tooltip.innerHTML = "取得件数: " + value + "件<br>" + label;
+          tooltip.style.display = "block";
+          tooltip.setAttribute("aria-hidden", "false");
+          tooltip.style.left = (event.clientX + 14) + "px";
+          tooltip.style.top = (event.clientY + 14) + "px";
+        });
+
+        svg.addEventListener("mouseleave", function () {
+          tooltip.style.display = "none";
+          tooltip.setAttribute("aria-hidden", "true");
+        });
+      }
+    }());
+  </script>
+</body>
+</html>

@@ -1,6 +1,9 @@
 ﻿import json
 import os
 import re
+import shutil
+import socket
+import subprocess
 import time
 from datetime import datetime
 from html import unescape
@@ -10,9 +13,10 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.chrome.options import Options
 
-# Suruga-ya監視の中核ロジック:
+# Suruga-yaチェックの中核ロジック:
 # - HTTPでページを巡回して商品を収集
 # - 前回との差分から新着を判定
 # - 結果をJSONとして保存
@@ -48,6 +52,148 @@ USER_AGENTS = [
         "Version/17.0 Safari/605.1.15"
     ),
 ]
+
+
+def _read_dotenv_value(key: str, path: str = ".env", default: str = "") -> str:
+    """`.env` から単一キーを読み取る。環境変数があればそれを優先する。"""
+    value = os.environ.get(key, "").strip()
+    if value:
+        return value
+
+    if not os.path.exists(path):
+        return default
+
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                current_key, current_value = line.split("=", 1)
+                if current_key.strip() != key:
+                    continue
+                current_value = current_value.strip()
+                if (
+                    current_value.startswith('"')
+                    and current_value.endswith('"')
+                    or current_value.startswith("'")
+                    and current_value.endswith("'")
+                ):
+                    current_value = current_value[1:-1]
+                return current_value
+    except OSError:
+        return default
+
+    return default
+
+
+def _default_chrome_user_data_dir() -> str:
+    """Windows の既定 Chrome ユーザーデータディレクトリを返す。"""
+    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+    if not local_app_data:
+        return ""
+    return os.path.join(local_app_data, "Google", "Chrome", "User Data")
+
+
+def _default_chrome_executable() -> str:
+    """Windows の既定 Chrome 実行ファイル候補を返す。"""
+    candidates = [
+        os.path.join(
+            os.environ.get("PROGRAMFILES", "").strip(),
+            "Google",
+            "Chrome",
+            "Application",
+            "chrome.exe",
+        ),
+        os.path.join(
+            os.environ.get("PROGRAMFILES(X86)", "").strip(),
+            "Google",
+            "Chrome",
+            "Application",
+            "chrome.exe",
+        ),
+        os.path.join(
+            os.environ.get("LOCALAPPDATA", "").strip(),
+            "Google",
+            "Chrome",
+            "Application",
+            "chrome.exe",
+        ),
+    ]
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+    return "chrome"
+
+
+def _wait_for_debug_port(host: str, port: int, timeout_seconds: float = 10.0) -> None:
+    """Chrome のリモートデバッグポートが開くまで待つ。"""
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return
+        except OSError:
+            time.sleep(0.2)
+    raise RuntimeError(f"Chrome remote debugging port did not open: {host}:{port}")
+
+
+def _prepare_debug_profile(user_data_dir: str, profile_directory: str) -> str:
+    """既存 Chrome プロファイルのコピーをローカル作業用に作成する。"""
+    temp_root = os.path.join(os.getcwd(), ".chrome-debug-profile")
+    if os.path.isdir(temp_root):
+        shutil.rmtree(temp_root)
+    os.makedirs(temp_root, exist_ok=True)
+
+    local_state_src = os.path.join(user_data_dir, "Local State")
+    local_state_dst = os.path.join(temp_root, "Local State")
+    if os.path.exists(local_state_src):
+        shutil.copy2(local_state_src, local_state_dst)
+
+    profile_src = os.path.join(user_data_dir, profile_directory)
+    profile_dst = os.path.join(temp_root, profile_directory)
+    if not os.path.isdir(profile_src):
+        raise RuntimeError(f"Chrome profile directory not found: {profile_src}")
+    shutil.copytree(profile_src, profile_dst)
+    return temp_root
+
+
+def _should_copy_profile_for_debug() -> bool:
+    """デバッグ起動時に既存プロファイルをコピーするかを返す。"""
+    raw = _read_dotenv_value("CHROME_COPY_PROFILE_FOR_DEBUG", default="0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _launch_chrome_for_debugging(open_url: str) -> tuple[subprocess.Popen, str, str]:
+    """通常の Chrome をリモートデバッグ付きで起動する。"""
+    chrome_path = _read_dotenv_value("CHROME_PATH", default=_default_chrome_executable()).strip()
+    user_data_dir = _read_dotenv_value("CHROME_USER_DATA_DIR", default="").strip()
+    profile_directory = _read_dotenv_value("CHROME_PROFILE_DIRECTORY", default="").strip()
+    debug_host = _read_dotenv_value("CHROME_REMOTE_DEBUGGING_HOST", default="127.0.0.1").strip()
+    debug_port_raw = _read_dotenv_value("CHROME_REMOTE_DEBUGGING_PORT", default="9222").strip()
+    debug_port = int(debug_port_raw) if debug_port_raw.isdigit() else 9222
+    debug_user_data_dir = ""
+    if user_data_dir and profile_directory and _should_copy_profile_for_debug():
+        debug_user_data_dir = _prepare_debug_profile(user_data_dir, profile_directory)
+    elif not user_data_dir:
+        debug_user_data_dir = os.path.join(os.getcwd(), ".chrome-debug-session")
+        if os.path.isdir(debug_user_data_dir):
+            shutil.rmtree(debug_user_data_dir, ignore_errors=True)
+        os.makedirs(debug_user_data_dir, exist_ok=True)
+
+    command = [
+        chrome_path,
+        f"--remote-debugging-port={debug_port}",
+    ]
+    if debug_user_data_dir:
+        command.append(f"--user-data-dir={debug_user_data_dir}")
+    if profile_directory:
+        command.append(f"--profile-directory={profile_directory}")
+    command.append(open_url)
+
+    process = subprocess.Popen(command)
+    _wait_for_debug_port(debug_host, debug_port)
+    return process, f"{debug_host}:{debug_port}", debug_user_data_dir
 
 
 def _safe_target_id(target_id: str) -> str:
@@ -124,7 +270,10 @@ def _save_snapshot(
     with open(files["saved"], "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-def _build_chrome_driver(headless: bool = True) -> webdriver.Chrome:
+def _build_chrome_driver(
+    headless: bool = True,
+    debugger_address: str = "",
+) -> webdriver.Chrome:
     """Cookie取得用のChromeドライバーを生成する。"""
     options = Options()
     options.page_load_strategy = "eager"
@@ -133,12 +282,26 @@ def _build_chrome_driver(headless: bool = True) -> webdriver.Chrome:
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    if debugger_address:
+        options.debugger_address = debugger_address
+    else:
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
     return webdriver.Chrome(options=options)
 
 
 def _save_cookies(driver: webdriver.Chrome) -> None:
     """ブラウザのCookieをJSONへ保存する。"""
-    cookies = driver.get_cookies()
+    try:
+        cookies = driver.get_cookies() or []
+        if not cookies:
+            payload = driver.execute_cdp_cmd("Network.getAllCookies", {})
+            cookies = payload.get("cookies", []) if isinstance(payload, dict) else []
+    except NoSuchWindowException as exc:
+        raise RuntimeError(
+            "The Chrome window was closed before cookies could be saved."
+        ) from exc
     with open(COOKIE_FILE, "w", encoding="utf-8") as f:
         json.dump(cookies, f, ensure_ascii=False, indent=2)
     print(f"Saved {len(cookies)} cookies to {COOKIE_FILE}")
@@ -146,18 +309,26 @@ def _save_cookies(driver: webdriver.Chrome) -> None:
 
 def bootstrap_login_session(open_url: str = DEFAULT_BASE_URL) -> None:
     """手動ログインセッションを開始し、最終的にCookieを保存する。"""
-    driver = _build_chrome_driver(headless=False)
+    print("Launching Chrome with remote debugging enabled...")
+    chrome_process, debugger_address, debug_user_data_dir = _launch_chrome_for_debugging(open_url)
+    driver = _build_chrome_driver(headless=False, debugger_address=debugger_address)
     try:
         print("Browser opened.")
+        print("A temporary copy of your Chrome profile is being used for this session.")
         print("1) Login to suruga-ya in the opened browser.")
-        print("2) Enable adult-content visibility.")
-        print("3) Open your target page and confirm adult items are visible.")
+        print("2) Adjust the site display settings you need.")
+        print("3) Open your target page and confirm the page is displayed as expected.")
         print("4) Return here and press Enter.")
-        driver.get(open_url)
         input("Press Enter after setup is complete...")
         _save_cookies(driver)
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        finally:
+            if chrome_process.poll() is None:
+                chrome_process.terminate()
+            if os.path.isdir(debug_user_data_dir):
+                shutil.rmtree(debug_user_data_dir, ignore_errors=True)
 
 
 def _load_cookie_header() -> str:
@@ -177,6 +348,51 @@ def _load_cookie_header() -> str:
         if name and value:
             pairs.append(f"{name}={value}")
     return "; ".join(pairs)
+
+
+def _cookie_list_from_header(header: str) -> list[dict[str, str]]:
+    """`name=value; ...` 形式のCookie文字列をJSON保存形式へ変換する。"""
+    rows: list[dict[str, str]] = []
+    for part in header.split(";"):
+        item = part.strip()
+        if not item or "=" not in item:
+            continue
+        name, value = item.split("=", 1)
+        name = name.strip()
+        value = value.strip()
+        if not name:
+            continue
+        rows.append({"name": name, "value": value})
+    return rows
+
+
+def save_cookie_header(header: str) -> int:
+    """Cookieヘッダー文字列を `surugaya_cookies.json` として保存する。"""
+    cookies = _cookie_list_from_header(header)
+    with open(COOKIE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cookies, f, ensure_ascii=False, indent=2)
+    return len(cookies)
+
+
+def import_cookies_from_file(path: str) -> int:
+    """JSON もしくは `name=value; ...` 形式のファイルから Cookie を保存する。"""
+    with open(path, "r", encoding="utf-8-sig") as f:
+        raw = f.read().strip()
+
+    cookies: list[dict[str, Any]]
+    if not raw:
+        cookies = []
+    elif raw.startswith("["):
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list):
+            raise RuntimeError("Cookie JSON must be a list.")
+        cookies = [row for row in parsed if isinstance(row, dict)]
+    else:
+        cookies = _cookie_list_from_header(raw)
+
+    with open(COOKIE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cookies, f, ensure_ascii=False, indent=2)
+    return len(cookies)
 
 
 def _fetch_html(url: str, cookie_header: str, user_agent: str, referer: str = "") -> str:
@@ -463,12 +679,27 @@ def load_history(target_id: str = DEFAULT_TARGET_ID, limit: int = 30) -> list[di
     return rows[-limit:][::-1]
 
 
+def reset_runtime_data(include_cookies: bool = False) -> list[str]:
+    """チェックの実行生成物を削除して差分状態を初期化する。"""
+    removed: list[str] = []
+
+    if os.path.isdir(TARGET_DATA_DIR):
+        shutil.rmtree(TARGET_DATA_DIR)
+        removed.append(TARGET_DATA_DIR)
+
+    if include_cookies and os.path.exists(COOKIE_FILE):
+        os.remove(COOKIE_FILE)
+        removed.append(COOKIE_FILE)
+
+    return removed
+
+
 def check_new_items(
     max_pages: Optional[int] = None,
     base_url: str = DEFAULT_BASE_URL,
     target_id: str = DEFAULT_TARGET_ID,
 ) -> dict[str, Any]:
-    """1回分の監視チェックを実行し、新着差分を判定して保存する。"""
+    """1回分のチェックを実行し、新着差分を判定して保存する。"""
     old_ids, _ = _load_snapshot(target_id=target_id)
     current_items = get_all_items(base_url=base_url, max_pages=max_pages)
 

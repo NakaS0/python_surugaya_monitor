@@ -1,115 +1,101 @@
-﻿# 駿河屋 新着監視ツール
+# Suruga-ya Check on Django
 
-このアプリは、指定した駿河屋の検索URLを監視し、前回実行時点から増えた商品（新着）を検出して表示します。
+駿河屋の検索結果をチェックし、新着を Django 上で保存・表示するプロジェクトです。
 
-## 開発背景
-中古ECサイト「駿河屋」において、特定商品の入荷状況を確認する際の利便性向上を目的として開発しました。
-従来、目的の商品に辿り着くには「商品名での検索」「状態の選択」「入荷カテゴリの指定」といった多段階のフィルタリング操作が必要であり、日常的なチェックにおいて大きな手間となっていました。
-また、サイト上の「新入荷」枠には数ヶ月前のデータが残る仕様のため、真に「最近入荷した商品」のみを判別することが困難であるという課題がありました。
+## 構成
 
-## 解決策
-本ツールでは、事前に設定した条件（URL）を元に自動でスクレイピングを行い、最新の入荷情報のみを抽出・集約します。
-さらに、実行ごとに前回の取得データとの差分比較を行う機能を実装し、新規に出品された商品のみを抽出して表示することで、情報の鮮度と視認性を大幅に向上させました。
+- Django プロジェクト: `config/`
+- Django アプリ: `monitor/`
+- スクレイパー本体: `scraper.py`
+- チェック対象設定: `.env`
+- 対象セット切替: `ACTIVE_TARGET_SET=1..4`
+- Cookie 保存先: `surugaya_cookies.json`
+- SQLite DB: `db.sqlite3`
 
+## セットアップ
 
-- 監視対象URL・表示名は `.env` から読み込みます
-- 成人向け表示を含めるため、ログイン済みCookieを利用します
-- 結果はローカルファイルに保存し、ダッシュボードで確認できます
-
-## 必要環境
-
-1. Python 3.10 以上
-2. Google Chrome
-3. 依存ライブラリ
-
-```bash
-pip install selenium
+```powershell
+python -m venv venv
+venv\Scripts\python.exe -m pip install -r requirements.txt
+venv\Scripts\python.exe manage.py migrate
 ```
 
-## 設定（.env）
+`.env` はプロジェクトルートに配置します。
 
-1. `.env.example` を `.env` にコピー
-2. 必要に応じて監視対象名・URLを編集
+## 対象セットの切替
 
-使用する主なキー:
+`.env` では、4パターン分のチェック対象セットを持てます。  
+使用するセットは `ACTIVE_TARGET_SET` で切り替えます。
 
-- `TARGET_1_NAME`, `TARGET_1_URL`
-- `TARGET_2_NAME`, `TARGET_2_URL`
-- `TARGET_3_NAME`, `TARGET_3_URL`
-- `TARGET_4_NAME`, `TARGET_4_URL`
+例:
 
-`.env` は Git 管理しない前提です（`.gitignore` 対象）。
-`TARGET_1` 〜 `TARGET_4` の `NAME` / `URL` が未設定の場合、アプリ起動時にエラーになります。
-
-## 使い方
-
-### 1. 初期セッション作成（ログイン + 成人向け表示設定）
-
-```bash
-python app.py init-session
+```powershell
+ACTIVE_TARGET_SET=2
 ```
 
-Chrome が開いたら:
+各セットは次のキーで定義します。
 
-1. 駿河屋へログイン
-2. 成人向け表示を有効化
-3. 対象ページで表示を確認
-4. ターミナルに戻って Enter
-
-Cookieは `surugaya_cookies.json` に保存されます。
-
-### 2. 監視を1回実行
-
-```bash
-python app.py check
+```powershell
+SET_1_TARGET_1_NAME=チェック対象1
+SET_1_TARGET_1_URL=
+...
+SET_4_TARGET_4_NAME=チェック対象4
+SET_4_TARGET_4_URL=
 ```
 
-### 3. 監視実行後にUI表示（最終ページ到達で終了）
+## Cookie の取り込み
 
-```bash
-python app.py watch
+Chrome の DevTools で取得した `Cookie:` ヘッダーを、そのまま保存できます。
+
+```powershell
+venv\Scripts\python.exe manage.py import_cookies --header "name=value; other=value"
 ```
 
-### 4. UIのみ起動
+ファイルから取り込む場合:
 
-```bash
-python app.py serve-ui --host 127.0.0.1 --port 8080
+```powershell
+venv\Scripts\python.exe manage.py import_cookies --file path\to\cookies.txt
 ```
 
-ブラウザで以下を開きます。
+`--file` は次のどちらでも扱えます。
 
-- http://127.0.0.1:8080
+- `name=value; other=value` 形式のテキスト
+- `[{ "name": "...", "value": "..." }]` 形式の JSON
 
-### Windows向け1行実行
+## Django コマンド
 
-```bash
-run_monitor.bat
+`.env` のチェック対象を DB に同期:
+
+```powershell
+venv\Scripts\python.exe manage.py sync_monitor_targets
 ```
 
-### ページ数を制限したい場合
+チェック実行して DB に保存:
 
-```bash
-python app.py check --max-pages 10
-python app.py watch --max-pages 10
+```powershell
+venv\Scripts\python.exe manage.py run_monitor
 ```
 
-## 保存ファイル
+ページ数制限付き:
 
-- `surugaya_cookies.json`: ログインCookie
-- `target_data/<target_id>/saved_items.json`: 監視用スナップショット
-- `target_data/<target_id>/latest_check.json`: 最新結果
-- `target_data/<target_id>/check_results.jsonl`: 実行履歴（追記）
-
-上記の実行生成物は `.gitignore` でGit対象外にしています。
-
-## 最新結果をCLIで確認
-
-```bash
-python app.py show-last --target default
+```powershell
+venv\Scripts\python.exe manage.py run_monitor --max-pages 10
 ```
 
-## 備考
+開発サーバー起動:
 
-- サイトHTML構造が変わると抽出ロジックの修正が必要です
-- Cookieの有効期限が切れたら `init-session` を再実行してください
-- 利用規約および法令に従って利用してください
+```powershell
+venv\Scripts\python.exe manage.py runserver 127.0.0.1:8080
+```
+
+## 画面
+
+- ダッシュボード: `http://127.0.0.1:8080/`
+- Django Admin: `http://127.0.0.1:8080/admin/`
+- JSON API: `http://127.0.0.1:8080/api/latest-runs/`
+
+## 補足
+
+- 旧 `app.py` と `dashboard.py` は削除し、Django に統一しました。
+- `run_monitor.bat` は Django の `runserver` 起動用です。
+- チェック対象または対象セットを変更したら `sync_monitor_targets` を再実行してください。
