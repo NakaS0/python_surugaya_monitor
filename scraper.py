@@ -32,6 +32,8 @@ DEFAULT_BASE_URL = (
 DEFAULT_TARGET_ID = "default"
 COOKIE_FILE = "surugaya_cookies.json"
 TARGET_DATA_DIR = "target_data"
+MATOME_CAMPAIGN_URL = "https://www.suruga-ya.jp/feature/campaign/index.html#matome"
+SALE_DATA_DIR = os.path.join(TARGET_DATA_DIR, "sales")
 
 HTTP_TIMEOUT_SECONDS = 8
 HTTP_RETRIES = 8
@@ -217,6 +219,17 @@ def _target_files(target_id: str) -> dict[str, str]:
         "latest": os.path.join(root, "latest_check.json"),
         "log": os.path.join(root, "check_results.jsonl"),
     }
+
+
+def _sale_cache_files(sale_id: str = "") -> dict[str, str]:
+    """セール情報キャッシュの保存先を返す。"""
+    os.makedirs(SALE_DATA_DIR, exist_ok=True)
+    files = {
+        "campaigns": os.path.join(SALE_DATA_DIR, "matome_campaigns.json"),
+    }
+    if sale_id:
+        files["items"] = os.path.join(SALE_DATA_DIR, f"{_safe_target_id(sale_id)}_items.json")
+    return files
 
 
 def latest_report_file(target_id: str = DEFAULT_TARGET_ID) -> str:
@@ -677,6 +690,84 @@ def load_history(target_id: str = DEFAULT_TARGET_ID, limit: int = 30) -> list[di
             except json.JSONDecodeError:
                 continue
     return rows[-limit:][::-1]
+
+
+def _parse_matome_campaigns(html: str) -> list[dict[str, Any]]:
+    """キャンペーンページの まとめうり セクションから一覧を抽出する。"""
+    start = html.find('<div id="matome"')
+    if start < 0:
+        return []
+    end = html.find("<!-- まとめうり おわり -->", start)
+    section = html[start:] if end < 0 else html[start:end]
+    blocks = re.findall(r'<div class="campaign_box_ss[^"]*">(.+?)</div><!--campaign_box_ss-->', section, flags=re.S)
+
+    campaigns: list[dict[str, Any]] = []
+    for index, block in enumerate(blocks, start=1):
+        title_match = re.search(r"<h4>(.*?)</h4>", block, flags=re.S | re.I)
+        link_match = re.search(r'<p class="link">.*?<a href="([^"]+)".*?>(.*?)</a>', block, flags=re.S | re.I)
+        if not title_match or not link_match:
+            continue
+
+        description = ""
+        period = ""
+        paragraphs = re.findall(r"<p(?:\s+[^>]*)?>(.*?)</p>", block, flags=re.S | re.I)
+        for paragraph_html in paragraphs:
+            text = _strip_tags(paragraph_html)
+            if not text:
+                continue
+            if text.startswith("期間："):
+                period = text
+                continue
+            if "OFF" in text or "対象商品" in text or "対象ジャンル" in text:
+                description = text if not description else f"{description} {text}"
+
+        conditions: list[dict[str, str]] = []
+        for minimum_html, discount_html in re.findall(r"<tr><td>(.*?)</td><td>(.*?)</td></tr>", block, flags=re.S | re.I):
+            conditions.append(
+                {
+                    "minimum": _strip_tags(minimum_html),
+                    "discount": _strip_tags(discount_html),
+                }
+            )
+
+        campaigns.append(
+            {
+                "id": f"matome_{index}",
+                "title": _strip_tags(title_match.group(1)),
+                "description": description,
+                "period": period,
+                "link_url": urljoin(MATOME_CAMPAIGN_URL, unescape(link_match.group(1).strip())),
+                "link_label": _strip_tags(link_match.group(2)),
+                "conditions": conditions,
+            }
+        )
+    return campaigns
+
+
+def fetch_matome_campaigns() -> list[dict[str, Any]]:
+    """まとめうりキャンペーン一覧を取得する。"""
+    html = _fetch_html(MATOME_CAMPAIGN_URL, _load_cookie_header(), USER_AGENTS[0], referer="https://www.suruga-ya.jp/")
+    return _parse_matome_campaigns(html)
+
+
+def fetch_sale_items(sale_url: str) -> list[dict[str, str]]:
+    """セールリンク先から取得できる商品一覧を返す。"""
+    if "/search" in sale_url or "search?" in sale_url:
+        items = get_all_items(base_url=sale_url)
+    else:
+        html = _fetch_html(sale_url, _load_cookie_header(), USER_AGENTS[0], referer=MATOME_CAMPAIGN_URL)
+        items = _extract_items_from_html(html, base_url=sale_url)
+
+    return [
+        {
+            "id": product_id,
+            "name": data.get("name", ""),
+            "url": data.get("url", ""),
+            "image_url": data.get("image_url", ""),
+            "price": data.get("price", ""),
+        }
+        for product_id, data in sorted(items.items(), key=lambda item: item[1].get("name", ""))
+    ]
 
 
 def reset_runtime_data(include_cookies: bool = False) -> list[str]:

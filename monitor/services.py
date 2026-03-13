@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from django.utils import timezone
 
 from fixed_targets import get_targets
-from scraper import check_new_items
+from scraper import _sale_cache_files, check_new_items, fetch_matome_campaigns, fetch_sale_items
 
 from .models import CheckRun, MonitorTarget, NewItem
+
+SALE_CACHE_TTL = timedelta(hours=1)
 
 
 def sync_targets(active_set: int | None = None) -> list[MonitorTarget]:
@@ -92,3 +96,51 @@ def run_check_for_target(target: MonitorTarget, max_pages: int | None = None) ->
         target_id=target.target_id,
     )
     return _create_check_run(target, report)
+
+
+def _load_json_cache(path: str) -> dict | list | None:
+    file_path = Path(path)
+    if not file_path.exists():
+        return None
+
+    modified_at = timezone.make_aware(
+        datetime.fromtimestamp(file_path.stat().st_mtime),
+        timezone.get_current_timezone(),
+    )
+    if timezone.now() - modified_at > SALE_CACHE_TTL:
+        return None
+
+    try:
+        return json.loads(file_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _write_json_cache(path: str, payload: dict | list) -> None:
+    Path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_matome_campaigns(force_refresh: bool = False) -> list[dict]:
+    """まとめうりキャンペーン一覧をキャッシュ付きで返す。"""
+    cache_path = _sale_cache_files()["campaigns"]
+    if not force_refresh:
+        cached = _load_json_cache(cache_path)
+        if isinstance(cached, list):
+            return cached
+
+    campaigns = fetch_matome_campaigns()
+    _write_json_cache(cache_path, campaigns)
+    return campaigns
+
+
+def load_sale_items(sale_id: str, sale_url: str, force_refresh: bool = False) -> list[dict]:
+    """まとめうり対象商品の一覧をキャッシュ付きで返す。"""
+    cache_path = _sale_cache_files(sale_id)["items"]
+    if not force_refresh:
+        cached = _load_json_cache(cache_path)
+        if isinstance(cached, list):
+            return cached
+
+    items = fetch_sale_items(sale_url)
+    _write_json_cache(cache_path, items)
+    return items

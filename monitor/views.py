@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from fixed_targets import available_target_sets, default_active_target_set
 
 from .models import CheckRun, MonitorTarget
-from .services import run_check_for_target, run_checks, sync_targets
+from .services import load_matome_campaigns, run_check_for_target, run_checks, sync_targets
 
 SESSION_KEY_ACTIVE_SET = "active_target_set"
 
@@ -24,8 +24,51 @@ def _set_options():
     return [item for item in available_target_sets() if item["value"] in {1, 2}]
 
 
+def _compact_graph_runs(runs: list[CheckRun], limit: int = 10, same_value_limit: int = 3) -> list[CheckRun]:
+    kept_runs: list[CheckRun] = []
+    previous_total_items: int | None = None
+    same_value_streak = 0
+
+    for run in runs:
+        total_items = run.total_items
+        if total_items == previous_total_items:
+            same_value_streak += 1
+        else:
+            same_value_streak = 1
+            previous_total_items = total_items
+        if same_value_streak <= same_value_limit:
+            kept_runs.append(run)
+
+    return kept_runs[:limit]
+
+
+def _sale_display_title(title: str) -> str:
+    return title.replace("まとめうり", "").replace("まとめ売り", "").strip()
+
+
+def _sale_discount_tooltip(sale: dict) -> list[str]:
+    conditions = sale.get("conditions") or []
+    parts: list[str] = []
+    for condition in conditions:
+        if not isinstance(condition, dict):
+            continue
+        minimum = str(condition.get("minimum") or "").strip()
+        discount = str(condition.get("discount") or "").strip()
+        if minimum and discount:
+            parts.append(f"{minimum}: {discount}")
+        elif discount:
+            parts.append(discount)
+    return parts
+
+
 def dashboard(request):
     """メインのダッシュボード画面を表示する。"""
+
+    requested_set = request.GET.get("active_set", "").strip()
+    if request.method == "GET" and requested_set.isdigit():
+        requested_set_no = int(requested_set)
+        if 1 <= requested_set_no <= 4:
+            request.session[SESSION_KEY_ACTIVE_SET] = requested_set_no
 
     active_set = _current_active_set(request)
 
@@ -85,7 +128,7 @@ def dashboard(request):
     new_items = []
     if selected_target is not None:
         recent_runs = list(selected_target.runs.order_by("-checked_at", "-id")[:3])
-        graph_runs = list(selected_target.runs.order_by("-checked_at", "-id")[:100])
+        graph_runs = _compact_graph_runs(list(selected_target.runs.order_by("-checked_at", "-id")))
         selected_run = recent_runs[0] if recent_runs else None
         display_items_run = (
             selected_target.runs.filter(new_items_count__gt=0).order_by("-checked_at", "-id").first()
@@ -102,6 +145,16 @@ def dashboard(request):
         for run in reversed(graph_runs)
     ]
 
+    sale_refresh = request.GET.get("refresh_sale", "").strip() == "1"
+    sale_campaigns = load_matome_campaigns(force_refresh=sale_refresh)
+    for sale in sale_campaigns:
+        sale["display_title"] = _sale_display_title(str(sale.get("title", "")))
+        sale["discount_tooltip"] = _sale_discount_tooltip(sale)
+    selected_sale_id = request.GET.get("sale", "").strip()
+    selected_sale = None
+    if sale_campaigns:
+        selected_sale = next((sale for sale in sale_campaigns if sale["id"] == selected_sale_id), sale_campaigns[0])
+
     context = {
         "summaries": summaries,
         "selected_target": selected_target,
@@ -113,6 +166,8 @@ def dashboard(request):
         "latest_overall_run": CheckRun.objects.filter(target__target_set=active_set).order_by("-checked_at", "-id").first(),
         "active_target_set": active_set,
         "target_sets": _set_options(),
+        "sale_campaigns": sale_campaigns,
+        "selected_sale": selected_sale,
     }
     return render(request, "monitor/dashboard.html", context)
 

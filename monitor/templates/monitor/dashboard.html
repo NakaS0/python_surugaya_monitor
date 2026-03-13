@@ -46,30 +46,181 @@
       margin: 0 auto;
       padding: 24px 16px 48px;
     }
+    .hero,
+    .panel {
+      border-radius: 24px;
+      border: 1px solid rgba(140, 184, 232, 0.55);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
     .hero {
       margin-bottom: 18px;
       padding: 18px 22px;
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      border-radius: 24px;
       background: linear-gradient(120deg, rgba(255, 255, 255, 0.94) 0%, rgba(236, 245, 255, 0.96) 45%, rgba(220, 236, 255, 0.94) 100%);
-      box-shadow: var(--shadow);
     }
-    .hero-top {
+    .hero-top,
+    .sale-strip-head,
+    .section-title,
+    .action-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
     }
-    .hero-actions {
+    .hero-actions,
+    .action-buttons {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
-    .hero h1 {
+    h1 {
       margin: 0;
       font-size: clamp(11px, 1.7vw, 18px);
       line-height: 1.1;
       letter-spacing: -0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .target-set-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 160px;
+      min-height: 38px;
+      padding: 4px;
+      border: 1px solid rgba(140, 184, 232, 0.72);
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(8, 79, 153, 0.12);
+    }
+    .target-set-form,
+    .check-form {
+      margin: 0;
+    }
+    .target-set-current {
+      min-width: 76px;
+      text-align: center;
+      color: var(--blue-deep);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .target-set-option,
+    .action-button {
+      font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .target-set-option {
+      width: 34px;
+      min-width: 34px;
+      min-height: 30px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0;
+      background: var(--blue-soft);
+      color: var(--blue-deep);
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      text-align: center;
+      cursor: pointer;
+    }
+    .action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 124px;
+      min-height: 38px;
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 16px;
+      color: var(--blue-deep);
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 800;
+      text-decoration: none;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(8, 79, 153, 0.18);
+    }
+    .action-button[disabled] {
+      opacity: 0.7;
+      cursor: wait;
+    }
+    .action-button.is-active {
+      background: var(--blue);
+      color: #fff;
+    }
+    .sale-strip-panel {
+      margin-bottom: 12px;
+      padding: 6px 12px;
+    }
+    .sale-strip-panel.is-hidden {
+      display: none;
+    }
+    .sale-strip-panel.is-hidden .sale-grid {
+      display: none;
+    }
+    .sale-grid {
+      margin: 0;
+      padding: 0 0 0 18px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px 18px;
+      list-style: disc;
+    }
+    .sale-item {
+      min-width: 0;
+      position: relative;
+    }
+    .sale-card {
+      display: inline;
+      padding: 0;
+      color: var(--blue-deep);
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .sale-tooltip {
+      position: absolute;
+      left: 0;
+      top: calc(100% + 6px);
+      display: none;
+      max-width: 220px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(8, 79, 153, 0.94);
+      color: #fff;
+      font-size: 11px;
+      line-height: 1.4;
+      box-shadow: 0 12px 24px rgba(8, 79, 153, 0.24);
+      z-index: 5;
+      white-space: normal;
+    }
+    .sale-tooltip-row + .sale-tooltip-row {
+      margin-top: 2px;
+    }
+    .sale-item:hover .sale-tooltip {
+      display: block;
+    }
+    .sale-card-title {
+      display: inline;
+      margin: 0;
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .target-strip {
       display: grid;
@@ -86,28 +237,25 @@
       border: 1px solid rgba(199, 222, 247, 0.95);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 255, 0.94));
       box-shadow: var(--shadow);
-      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-    .target-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--line-strong);
     }
     .target-card.active {
       border-color: var(--blue);
       background: linear-gradient(135deg, rgba(11, 102, 195, 0.12), rgba(67, 181, 255, 0.08)), linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(235, 245, 255, 0.96));
       box-shadow: 0 18px 32px rgba(11, 102, 195, 0.18);
     }
-    .target-name {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 800;
-      line-height: 1.35;
-    }
     .target-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+    }
+    .target-name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .target-pill {
       display: inline-flex;
@@ -118,12 +266,9 @@
       color: var(--blue-deep);
       font-size: 12px;
       font-weight: 700;
+      white-space: nowrap;
     }
     .action-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
       margin-bottom: 18px;
       padding: 18px 22px;
       border-radius: 24px;
@@ -136,107 +281,18 @@
       margin: 0;
       font-size: 24px;
       font-weight: 800;
-      letter-spacing: -0.03em;
     }
     .action-meta {
       margin-top: 6px;
       color: rgba(255, 255, 255, 0.85);
       font-size: 13px;
     }
-    .check-form {
-      margin: 0;
-    }
-    .target-set-form {
-      margin: 0;
-    }
-    .target-set-switcher {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 160px;
-      min-height: 38px;
-      padding: 4px;
-      border: 1px solid rgba(140, 184, 232, 0.72);
-      border-radius: 999px;
-      background: #fff;
-      box-shadow: 0 10px 24px rgba(8, 79, 153, 0.12);
-    }
-    .target-set-current {
-      min-width: 76px;
-      text-align: center;
-      color: var(--blue-deep);
-      font-size: 13px;
-      font-weight: 800;
-      line-height: 1;
-    }
-    .target-set-option {
-      width: 34px;
-      min-width: 34px;
-      min-height: 30px;
-      border: 0;
-      border-radius: 999px;
-      padding: 0;
-      background: var(--blue-soft);
-      color: var(--blue-deep);
-      font: inherit;
-      font-size: 28px;
-      font-weight: 800;
-      line-height: 1;
-      text-align: center;
-      cursor: pointer;
-    }
-    .target-set-option:hover,
-    .target-set-option.active {
-      background: rgba(11, 102, 195, 0.16);
-    }
-    .action-buttons {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .action-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 124px;
-      min-height: 38px;
-      border: 0;
-      border-radius: 999px;
-      padding: 9px 16px;
-      color: var(--blue-deep);
-      font-size: 13px;
-      line-height: 1;
-      font-weight: 800;
-      font-family: inherit;
-      text-decoration: none;
-      background: #fff;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(8, 79, 153, 0.18);
-      appearance: none;
-      -webkit-appearance: none;
-    }
-    .action-button[disabled] {
-      opacity: 0.7;
-      cursor: wait;
-    }
     .stack {
       display: grid;
       gap: 18px;
     }
     .panel {
-      border-radius: 24px;
-      border: 1px solid rgba(140, 184, 232, 0.55);
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
       padding: 20px 22px 22px;
-    }
-    .section-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: baseline;
-      margin-bottom: 14px;
     }
     .section-title h2 {
       margin: 0;
@@ -262,7 +318,6 @@
       border-bottom: 1px solid #e6f0fb;
       text-align: left;
       font-size: 14px;
-      vertical-align: top;
     }
     th {
       color: var(--blue-deep);
@@ -304,9 +359,6 @@
       font-weight: 800;
       line-height: 1.5;
     }
-    .item-name:hover, .item-url:hover {
-      text-decoration: underline;
-    }
     .item-detail {
       margin-top: 8px;
       color: var(--muted);
@@ -328,21 +380,25 @@
       background: rgba(255, 255, 255, 0.72);
       color: var(--muted);
     }
-    .graph-button {
-      min-width: 132px;
-    }
-    .modal-overlay {
+    .graph-button { min-width: 132px; }
+    .modal-overlay,
+    .progress-overlay {
       position: fixed;
       inset: 0;
       display: none;
       align-items: center;
       justify-content: center;
       background: rgba(6, 30, 54, 0.42);
-      z-index: 998;
       backdrop-filter: blur(4px);
     }
-    .modal-overlay.visible {
-      display: flex;
+    .modal-overlay { z-index: 998; }
+    .progress-overlay { z-index: 999; }
+    .modal-overlay.visible,
+    .progress-overlay.visible { display: flex; }
+    .modal-card,
+    .progress-card {
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 24px 48px rgba(5, 36, 77, 0.22);
     }
     .modal-card {
       width: min(920px, calc(100vw - 32px));
@@ -350,8 +406,6 @@
       overflow: auto;
       padding: 22px;
       border-radius: 24px;
-      background: rgba(255, 255, 255, 0.98);
-      box-shadow: 0 24px 48px rgba(5, 36, 77, 0.22);
     }
     .modal-head {
       display: flex;
@@ -360,30 +414,16 @@
       gap: 12px;
       margin-bottom: 18px;
     }
-    .modal-head h3 {
-      margin: 0;
-      font-size: 22px;
-      color: var(--blue-deep);
-    }
-    .close-button {
-      min-width: 72px;
-    }
+    .modal-head h3 { margin: 0; font-size: 22px; color: var(--blue-deep); }
+    .close-button { min-width: 72px; }
     .graph-wrap {
       padding: 16px;
       border-radius: 18px;
       border: 1px solid rgba(199, 222, 247, 0.95);
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 255, 0.94));
     }
-    .graph-svg {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .graph-caption {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-    }
+    .graph-svg { width: 100%; height: auto; display: block; }
+    .graph-caption { margin-top: 10px; color: var(--muted); font-size: 12px; }
     .graph-tooltip {
       position: fixed;
       display: none;
@@ -395,32 +435,17 @@
       line-height: 1.5;
       pointer-events: none;
       z-index: 1001;
-      box-shadow: 0 12px 24px rgba(5, 36, 77, 0.22);
       white-space: nowrap;
-    }
-    .progress-overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(6, 30, 54, 0.42);
-      z-index: 999;
-      backdrop-filter: blur(4px);
-    }
-    .progress-overlay.visible {
-      display: flex;
     }
     .progress-card {
       width: min(520px, calc(100vw - 32px));
       padding: 26px 28px 24px;
       border-radius: 28px;
+      text-align: left;
+      border: 1px solid rgba(199, 222, 247, 0.95);
       background:
         radial-gradient(circle at top right, rgba(67, 181, 255, 0.16), transparent 28%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(236, 245, 255, 0.97));
-      box-shadow: 0 24px 48px rgba(5, 36, 77, 0.22);
-      text-align: left;
-      border: 1px solid rgba(199, 222, 247, 0.95);
     }
     .progress-head {
       display: flex;
@@ -428,25 +453,6 @@
       justify-content: space-between;
       gap: 18px;
       margin-bottom: 18px;
-    }
-    .progress-brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      background: rgba(11, 102, 195, 0.08);
-      color: var(--blue-deep);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-    }
-    .progress-brand-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #43b5ff, #0b66c3);
-      box-shadow: 0 0 0 4px rgba(67, 181, 255, 0.16);
     }
     .progress-visual {
       width: 160px;
@@ -460,31 +466,8 @@
       height: auto;
       display: block;
       border-radius: 18px;
-      box-shadow: 0 12px 24px rgba(11, 102, 195, 0.16);
       border: 1px solid rgba(140, 184, 232, 0.55);
       background: #fff;
-    }
-    .progress-fallback {
-      flex: 0 0 auto;
-      position: absolute;
-      border-radius: 14px;
-      background: linear-gradient(180deg, #ffffff, #dcebff);
-      border: 1px solid rgba(140, 184, 232, 0.72);
-      box-shadow: 0 10px 22px rgba(11, 102, 195, 0.12);
-    }
-    .progress-box {
-      left: 0;
-      bottom: 2px;
-      width: 44px;
-      height: 44px;
-      animation: floatBox 1.8s ease-in-out infinite;
-    }
-    .progress-card-mini {
-      right: 0;
-      top: 0;
-      width: 66px;
-      height: 52px;
-      animation: floatCard 1.8s ease-in-out infinite 0.2s;
     }
     .progress-bar-track {
       margin-top: 8px;
@@ -503,86 +486,32 @@
       background-size: 200% 100%;
       animation: loadingBar 1.4s linear infinite;
     }
-    .progress-title {
-      margin: 0;
-      color: var(--blue-deep);
-      font-size: 22px;
-      font-weight: 800;
-    }
-    .progress-note {
-      margin: 8px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .progress-status {
-      margin-top: 14px;
-      color: var(--blue-deep);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
+    .progress-title { margin: 0; color: var(--blue-deep); font-size: 22px; font-weight: 800; line-height: 1.45; }
+    .progress-title-label,
+    .progress-title-target {
+      display: block;
     }
     @keyframes loadingBar {
-      0% {
-        transform: translateX(-20%);
-        background-position: 0% 50%;
-      }
-      100% {
-        transform: translateX(210%);
-        background-position: 100% 50%;
-      }
-    }
-    @keyframes floatBox {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
-    @keyframes floatCard {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(5px); }
+      0% { transform: translateX(-20%); background-position: 0% 50%; }
+      100% { transform: translateX(210%); background-position: 100% 50%; }
     }
     @media (max-width: 1100px) {
-      .target-strip {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+      .target-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sale-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 720px) {
       .wrap { padding: 14px 12px 28px; }
       .hero { padding: 16px 18px; }
-      .target-strip {
-        grid-template-columns: 1fr;
-      }
-      .action-bar,
-      .section-title {
-        display: block;
-      }
-      .hero-top {
-        display: block;
-      }
-      .hero-actions {
-        margin-top: 12px;
-        display: flex;
-        flex-wrap: wrap;
-      }
-      .hero-top .action-button,
-      .hero-top .target-set-switcher {
-        margin-top: 12px;
-      }
-      .action-buttons {
-        margin-top: 12px;
-      }
-      .check-form {
-        margin: 0;
-      }
-      .panel {
-        padding: 16px;
-      }
-      .item-card {
-        grid-template-columns: 1fr;
-      }
-      .item-thumb {
-        width: 100%;
-        height: 180px;
-      }
+      .target-strip,
+      .sale-grid { grid-template-columns: 1fr; }
+      .hero-top,
+      .section-title,
+      .action-bar { display: block; }
+      .hero-actions,
+      .action-buttons { margin-top: 12px; flex-wrap: wrap; }
+      .panel { padding: 16px; }
+      .item-card { grid-template-columns: 1fr; }
+      .item-thumb { width: 100%; height: 180px; }
     }
   </style>
 </head>
@@ -592,12 +521,13 @@
       <div class="hero-top">
         <h1>駿河屋新着チェッカー</h1>
         <div class="hero-actions">
+          <button class="action-button" type="button" id="toggle-sale-visibility">セール情報</button>
           <div class="target-set-switcher">
             <form class="target-set-form" method="post" action="/">
               {% csrf_token %}
               <input type="hidden" name="action" value="switch_set">
               <input type="hidden" name="active_set" value="{% if active_target_set == 1 %}2{% else %}1{% endif %}">
-              <button class="target-set-option" type="submit" aria-label="左へ">‹</button>
+              <button class="target-set-option" type="submit" aria-label="前へ">‹</button>
             </form>
             <div class="target-set-current">
               {% for target_set in target_sets %}
@@ -608,10 +538,17 @@
               {% csrf_token %}
               <input type="hidden" name="action" value="switch_set">
               <input type="hidden" name="active_set" value="{% if active_target_set == 1 %}2{% else %}1{% endif %}">
-              <button class="target-set-option" type="submit" aria-label="右へ">›</button>
+              <button class="target-set-option" type="submit" aria-label="次へ">›</button>
             </form>
           </div>
-          <form class="check-form js-check-form" method="post" action="/">
+          <form
+            class="check-form js-check-form"
+            method="post"
+            action="/"
+            data-progress-label="すべてのチェック対象"
+            data-progress-mode="all"
+            data-progress-targets="{% for summary in summaries %}{{ summary.target.name }}{% if not forloop.last %}||{% endif %}{% endfor %}"
+          >
             {% csrf_token %}
             {% if selected_target %}
               <input type="hidden" name="selected_target" value="{{ selected_target.target_id }}">
@@ -623,15 +560,40 @@
       </div>
     </section>
 
+    <section class="panel sale-strip-panel is-hidden" id="sale-strip-panel">
+      {% if sale_campaigns %}
+        <ul class="sale-grid">
+          {% for sale in sale_campaigns %}
+            <li class="sale-item">
+              <span class="sale-card">
+                <span class="sale-card-title">{{ sale.display_title }}</span>
+              </span>
+              {% if sale.discount_tooltip %}
+                <div class="sale-tooltip">
+                  {% for row in sale.discount_tooltip %}
+                    <div class="sale-tooltip-row">{{ row }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty">表示できるセール情報がありません。</div>
+      {% endif %}
+    </section>
+
     <section class="target-strip">
       {% for summary in summaries %}
         <a class="target-card{% if selected_target and selected_target.id == summary.target.id %} active{% endif %}" href="/?target={{ summary.target.target_id }}">
           <div class="target-head">
             <h2 class="target-name">{{ summary.target.name }}</h2>
             {% if summary.latest_run %}
-              <div class="target-pill">新着 {{ summary.latest_run.new_items_count }} 件</div>
+              <div class="target-pill">
+                {% if summary.latest_run.new_items_count == 0 %}新着なし{% else %}新着 {{ summary.latest_run.new_items_count }} 件{% endif %}
+              </div>
             {% else %}
-              <div class="target-pill">未実行</div>
+              <div class="target-pill">未チェック</div>
             {% endif %}
           </div>
         </a>
@@ -645,12 +607,12 @@
         <div>
           <h2 class="action-title">{{ selected_target.name }}</h2>
           {% if latest_overall_run %}
-            <div class="action-meta">最終更新: {{ latest_overall_run.checked_at|date:"Y-m-d H:i:s" }}</div>
+            <div class="action-meta">最終チェック: {{ latest_overall_run.checked_at|date:"Y-m-d H:i:s" }}</div>
           {% endif %}
         </div>
         <div class="action-buttons">
           <a class="action-button" href="{{ selected_target.url }}" target="_blank" rel="noreferrer">駿河屋ページ</a>
-          <form class="check-form js-check-form" method="post" action="/">
+          <form class="check-form js-check-form" method="post" action="/" data-progress-label="{{ selected_target.name }}">
             {% csrf_token %}
             <input type="hidden" name="target" value="{{ selected_target.target_id }}">
             <input type="hidden" name="selected_target" value="{{ selected_target.target_id }}">
@@ -688,7 +650,7 @@
             </table>
           </div>
         {% else %}
-          <div class="empty">まだ履歴はありません。</div>
+          <div class="empty">まだ実行履歴はありません。</div>
         {% endif %}
       </div>
 
@@ -696,10 +658,10 @@
         <div class="section-title">
           <h2>直近新着アイテム</h2>
           <span>
-            {% if display_items_run %}
-              表示元: {{ display_items_run.checked_at|date:"Y-m-d H:i:s" }}
+            {% if new_items %}
+              {{ display_items_run.checked_at|date:"Y-m-d H:i:s" }}
             {% else %}
-              表示できる履歴なし
+              チェックでは新着アイテムなし
             {% endif %}
           </span>
         </div>
@@ -726,7 +688,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="empty">表示できる新着アイテムはありません。</div>
+          <div class="empty">チェックでは新着アイテムなし</div>
         {% endif %}
       </div>
     </section>
@@ -742,7 +704,7 @@
       </div>
       <div class="graph-wrap">
         <svg class="graph-svg" id="graph-svg" viewBox="0 0 860 420" preserveAspectRatio="xMidYMid meet"></svg>
-        <div class="graph-caption">最新 100 件までの実行履歴から取得件数を表示しています。</div>
+        <div class="graph-caption">最新 10 件までを表示し、同じ取得件数が続く場合は最新 3 件まで残します。</div>
       </div>
     </div>
   </div>
@@ -753,12 +715,10 @@
     <div class="progress-card">
       <div class="progress-head">
         <div>
-          <div class="progress-brand">
-            <span class="progress-brand-dot"></span>
-            SURUGA-YA LOADING
-          </div>
-          <p class="progress-title">新着データを確認しています</p>
-          <p class="progress-note">駿河屋ページから商品情報を取得し、差分を整理しています。完了後に画面が自動で更新されます。</p>
+          <p class="progress-title">
+            <span class="progress-title-label">チェック対象:</span>
+            <span class="progress-title-target" id="progress-target-name">選択中の対象</span>
+          </p>
         </div>
         <div class="progress-visual" aria-hidden="true">
           <img class="loading-gif" src="{% static 'cat.gif' %}" alt="loading">
@@ -767,7 +727,6 @@
       <div class="progress-bar-track" aria-hidden="true">
         <div class="progress-bar-fill"></div>
       </div>
-      <div class="progress-status">CHECK IN PROGRESS</div>
     </div>
   </div>
 
@@ -775,17 +734,59 @@
     (function () {
       const overlay = document.getElementById("progress-overlay");
       const forms = document.querySelectorAll(".js-check-form");
-      if (!forms.length || !overlay) return;
+      const progressTargetName = document.getElementById("progress-target-name");
+
+      let progressTargetInterval = null;
+
+      function startProgressTargetRotation(targets) {
+        if (!progressTargetName) return;
+        if (progressTargetInterval) {
+          window.clearInterval(progressTargetInterval);
+          progressTargetInterval = null;
+        }
+        if (!targets.length) return;
+
+        let currentIndex = 0;
+        progressTargetName.textContent = targets[0];
+
+        if (targets.length === 1) {
+          return;
+        }
+
+        progressTargetInterval = window.setInterval(function () {
+          currentIndex = (currentIndex + 1) % targets.length;
+          progressTargetName.textContent = targets[currentIndex];
+        }, 1800);
+      }
 
       forms.forEach(function (form) {
         form.addEventListener("submit", function () {
+          const progressLabel = form.dataset.progressLabel || "選択中の対象";
+          const progressMode = form.dataset.progressMode || "single";
+          const progressTargets = (form.dataset.progressTargets || "")
+            .split("||")
+            .map(function (value) { return value.trim(); })
+            .filter(Boolean);
           const button = form.querySelector("button");
           if (button) {
             button.disabled = true;
             button.textContent = "チェック中...";
           }
-          overlay.classList.add("visible");
-          overlay.setAttribute("aria-hidden", "false");
+          if (progressTargetName) {
+            if (progressMode === "all" && progressTargets.length) {
+              startProgressTargetRotation(progressTargets);
+            } else {
+              if (progressTargetInterval) {
+                window.clearInterval(progressTargetInterval);
+                progressTargetInterval = null;
+              }
+              progressTargetName.textContent = progressLabel;
+            }
+          }
+          if (overlay) {
+            overlay.classList.add("visible");
+            overlay.setAttribute("aria-hidden", "false");
+          }
         });
       });
 
@@ -812,35 +813,29 @@
         const values = rows.map(function (row) { return row.total_items || 0; });
         const maxValue = Math.max.apply(null, values.concat([1]));
         const stepX = rows.length > 1 ? innerWidth / (rows.length - 1) : 0;
-
         const points = rows.map(function (row, index) {
           const x = padding.left + (rows.length > 1 ? stepX * index : innerWidth / 2);
           const y = padding.top + innerHeight - ((row.total_items || 0) / maxValue) * innerHeight;
           return { x: x, y: y, value: row.total_items || 0, label: row.checked_at };
         });
-
         const polyline = points.map(function (point) {
-          return point.x.toFixed(1) + ',' + point.y.toFixed(1);
-        }).join(' ');
-
-        const horizontalLines = 4;
-        const grid = Array.from({ length: horizontalLines + 1 }, function (_, index) {
-          const ratio = index / horizontalLines;
+          return point.x.toFixed(1) + "," + point.y.toFixed(1);
+        }).join(" ");
+        const grid = Array.from({ length: 5 }, function (_, index) {
+          const ratio = index / 4;
           const y = padding.top + innerHeight * ratio;
           const value = Math.round(maxValue * (1 - ratio));
           return '<line x1="' + padding.left + '" y1="' + y + '" x2="' + (width - padding.right) + '" y2="' + y + '" stroke="#d8e9fb" stroke-width="1" />'
-            + '<text x="' + (padding.left - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#56779d" font-size="12">' + value + '</text>';
-        }).join('');
-
+            + '<text x="' + (padding.left - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="#56779d" font-size="12">' + value + "</text>";
+        }).join("");
         const dots = points.map(function (point) {
-          return '<circle class="graph-dot" cx="' + point.x + '" cy="' + point.y + '" r="4" fill="#0b66c3"'
-            + ' data-label="' + point.label + '" data-value="' + point.value + '">'
-            + '</circle>';
-        }).join('');
-
-        const lastPoint = points[points.length - 1];
-        const firstLabel = rows[0].checked_at || '';
-        const lastLabel = rows[rows.length - 1].checked_at || '';
+          return '<circle class="graph-dot" cx="' + point.x + '" cy="' + point.y + '" r="4" fill="#0b66c3" data-label="' + point.label + '" data-value="' + point.value + '"></circle>';
+        }).join("");
+        const pointLabels = points.map(function (point) {
+          return '<text x="' + point.x + '" y="' + (point.y - 12) + '" text-anchor="middle" fill="#084f99" font-size="11" font-weight="700">' + point.value + '件</text>';
+        }).join("");
+        const firstLabel = rows[0].checked_at || "";
+        const lastLabel = rows[rows.length - 1].checked_at || "";
 
         svg.innerHTML =
           '<rect x="0" y="0" width="' + width + '" height="' + height + '" rx="18" fill="#ffffff" />'
@@ -849,9 +844,9 @@
           + '<line x1="' + padding.left + '" y1="' + padding.top + '" x2="' + padding.left + '" y2="' + (padding.top + innerHeight) + '" stroke="#8cb8e8" stroke-width="1.5" />'
           + '<polyline fill="none" stroke="#0b66c3" stroke-width="3" points="' + polyline + '" />'
           + dots
-          + '<text x="' + padding.left + '" y="' + (height - 14) + '" fill="#56779d" font-size="12">' + firstLabel + '</text>'
-          + '<text x="' + (width - padding.right) + '" y="' + (height - 14) + '" text-anchor="end" fill="#56779d" font-size="12">' + lastLabel + '</text>'
-          + '<text x="' + lastPoint.x + '" y="' + (lastPoint.y - 12) + '" text-anchor="middle" fill="#084f99" font-size="12" font-weight="700">' + lastPoint.value + '件</text>';
+          + pointLabels
+          + '<text x="' + padding.left + '" y="' + (height - 14) + '" fill="#56779d" font-size="12">' + firstLabel + "</text>"
+          + '<text x="' + (width - padding.right) + '" y="' + (height - 14) + '" text-anchor="end" fill="#56779d" font-size="12">' + lastLabel + "</text>";
       }
 
       function openModal() {
@@ -867,17 +862,11 @@
         modal.setAttribute("aria-hidden", "true");
       }
 
-      if (openGraphButton) {
-        openGraphButton.addEventListener("click", openModal);
-      }
-      if (closeGraphButton) {
-        closeGraphButton.addEventListener("click", closeModal);
-      }
+      if (openGraphButton) openGraphButton.addEventListener("click", openModal);
+      if (closeGraphButton) closeGraphButton.addEventListener("click", closeModal);
       if (modal) {
         modal.addEventListener("click", function (event) {
-          if (event.target === modal) {
-            closeModal();
-          }
+          if (event.target === modal) closeModal();
         });
       }
 
@@ -886,24 +875,55 @@
           const target = event.target;
           if (!(target instanceof SVGCircleElement) || !target.classList.contains("graph-dot")) {
             tooltip.style.display = "none";
-            tooltip.setAttribute("aria-hidden", "true");
             return;
           }
-
           const label = target.getAttribute("data-label") || "";
           const value = target.getAttribute("data-value") || "0";
           tooltip.innerHTML = "取得件数: " + value + "件<br>" + label;
           tooltip.style.display = "block";
-          tooltip.setAttribute("aria-hidden", "false");
           tooltip.style.left = (event.clientX + 14) + "px";
           tooltip.style.top = (event.clientY + 14) + "px";
         });
-
         svg.addEventListener("mouseleave", function () {
           tooltip.style.display = "none";
-          tooltip.setAttribute("aria-hidden", "true");
         });
       }
+
+      const saleStripPanel = document.getElementById("sale-strip-panel");
+      const toggleSaleVisibilityButton = document.getElementById("toggle-sale-visibility");
+      const saleVisibilityStorageKey = "sale-strip-hidden";
+      if (saleStripPanel && toggleSaleVisibilityButton) {
+        const storedHidden = window.localStorage.getItem(saleVisibilityStorageKey);
+        const hidden = storedHidden === null ? true : storedHidden === "true";
+        saleStripPanel.classList.toggle("is-hidden", hidden);
+        toggleSaleVisibilityButton.classList.toggle("is-active", !hidden);
+
+        toggleSaleVisibilityButton.addEventListener("click", function () {
+          const hidden = saleStripPanel.classList.toggle("is-hidden");
+          window.localStorage.setItem(saleVisibilityStorageKey, String(hidden));
+          toggleSaleVisibilityButton.classList.toggle("is-active", !hidden);
+        });
+      }
+
+      function autoFitText(elements, defaultSize, minSize) {
+        elements.forEach(function (element) {
+          if (!(element instanceof HTMLElement)) return;
+          element.style.fontSize = defaultSize + "px";
+          while (element.scrollWidth > element.clientWidth && parseFloat(element.style.fontSize) > minSize) {
+            element.style.fontSize = (parseFloat(element.style.fontSize) - 0.5) + "px";
+          }
+        });
+      }
+
+      function applyAutoFit() {
+        autoFitText(Array.from(document.querySelectorAll(".action-button")), 13, 9);
+        autoFitText(Array.from(document.querySelectorAll(".target-name")), 18, 10);
+        autoFitText(Array.from(document.querySelectorAll(".target-set-current")), 13, 9);
+        autoFitText(Array.from(document.querySelectorAll(".sale-card-title")), 11, 8);
+      }
+
+      applyAutoFit();
+      window.addEventListener("resize", applyAutoFit);
     }());
   </script>
 </body>
